@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from './firebase';
 import { Member, Weighing } from './types';
@@ -29,16 +29,24 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [wLoaded, setWLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Refs biar setTimeout ga kena stale closure bug
+  const mLoadedRef = useRef(false);
+  const wLoadedRef = useRef(false);
+
   useEffect(() => {
+    // Timeout cuma set error kalau MEMANG listener belum pernah sukses sama sekali
     const timeout = setTimeout(() => {
-      if (!mLoaded || !wLoaded) {
-        setError('Koneksi Firebase lambat atau gagal. Cek config .env dan Firestore rules.');
+      if (!mLoadedRef.current || !wLoadedRef.current) {
+        setError('Koneksi Firebase lambat. Cek koneksi internet atau ad-blocker.');
       }
-    }, 15000);
+    }, 20000); // 20 detik, lebih toleran
 
     seedMembers(DEFAULT_NAMES).catch(e => {
       console.error('Seed failed:', e);
-      setError(`Gagal connect Firebase: ${e.message}`);
+      // Cuma set error kalau belum ada data sama sekali
+      if (!mLoadedRef.current) {
+        setError(`Gagal connect Firebase: ${e.message}`);
+      }
     });
 
     const unsubM = onSnapshot(
@@ -46,13 +54,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
       snap => {
         const data = snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<Member, 'id'>) }));
         setMembers(data.sort((a, b) => a.name.localeCompare(b.name)));
+        mLoadedRef.current = true;
         setMLoaded(true);
-        setError(null); // clear stale error kalau data akhirnya sampe
+        setError(null); // CLEAR error begitu data masuk
       },
       err => {
         console.error('Members listener error:', err);
-        setError(`Firestore error: ${err.message}`);
-        setMLoaded(true);
+        // Cuma set error kalau belum pernah dapet data
+        if (!mLoadedRef.current) {
+          setError(`Firestore error: ${err.message}`);
+          setMLoaded(true);
+        }
       }
     );
 
@@ -61,13 +73,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
       snap => {
         const data = snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<Weighing, 'id'>) }));
         setWeighings(data);
+        wLoadedRef.current = true;
         setWLoaded(true);
         setError(null);
       },
       err => {
         console.error('Weighings listener error:', err);
-        setError(`Firestore error: ${err.message}`);
-        setWLoaded(true);
+        if (!wLoadedRef.current) {
+          setError(`Firestore error: ${err.message}`);
+          setWLoaded(true);
+        }
       }
     );
 
@@ -89,8 +104,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const loading = !mLoaded || !wLoaded;
 
+  // Jangan tampilin error kalau data members udah ada (bukti konkret connection sukses)
+  const effectiveError = members.length > 0 ? null : error;
+
   return (
-    <Ctx.Provider value={{ members, weighings, loading, error, getLatestWeight, getMemberWeighings }}>
+    <Ctx.Provider value={{ members, weighings, loading, error: effectiveError, getLatestWeight, getMemberWeighings }}>
       {children}
     </Ctx.Provider>
   );
