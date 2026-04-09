@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Member, Weighing } from '../lib/types';
+import { Member, Weighing, getGender } from '../lib/types';
 import { calcBmi } from '../lib/bmi';
 import BmiCharacter from './BmiCharacter';
 
@@ -13,6 +13,7 @@ interface Props {
 
 export default function MemberCard({ member, latestWeight, weighings, index }: Props) {
   const bmi = latestWeight ? calcBmi(latestWeight, member.heightCm) : null;
+  const gender = getGender(member.name);
 
   const memberWeighings = weighings
     .filter(w => w.memberId === member.id)
@@ -24,119 +25,89 @@ export default function MemberCard({ member, latestWeight, weighings, index }: P
 
   const bgColor = bmi?.color || '#B197FC';
 
-  // Anonymous label: cuma inisial (huruf pertama nama)
-  const initial = member.name.charAt(0).toUpperCase();
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: Math.min(index * 0.02, 0.3), duration: 0.25 }}
-      whileHover="hover"
+      whileHover={{ y: -4, scale: 1.015 }}
+      className="h-full"
     >
-      <Link to={`/member/${member.id}`}>
-        <motion.div
-          className="candy-card relative overflow-hidden cursor-pointer group"
-          style={{ borderColor: bgColor }}
-          variants={{
-            hover: { y: -4, scale: 1.015 },
-          }}
+      <Link to={`/member/${member.id}`} className="block h-full">
+        <div
+          className="candy-card relative overflow-hidden cursor-pointer h-full flex flex-col"
+          style={{ borderColor: bgColor, minHeight: '180px' }}
         >
+          {/* Decorative blob */}
           <div
-            className="absolute -top-10 -right-10 w-32 h-32 rounded-full opacity-30"
+            className="absolute -top-10 -right-10 w-32 h-32 rounded-full opacity-30 pointer-events-none"
             style={{ background: bgColor }}
           />
 
-          <div className="relative flex items-center gap-4">
-            {/* Avatar */}
+          <div className="relative flex items-center gap-3 flex-1">
+            {/* Avatar - fixed size */}
             <div className="shrink-0">
               {member.photoUrl ? (
                 <div
-                  className="w-20 h-20 rounded-full border-4 bg-cover bg-center shadow-candy-sm"
+                  className="w-16 h-16 rounded-full border-4 bg-cover bg-center shadow-candy-sm"
                   style={{ borderColor: bgColor, backgroundImage: `url(${member.photoUrl})` }}
                 />
               ) : (
                 <div
-                  className="w-20 h-20 rounded-full border-4 flex items-center justify-center text-3xl font-display font-bold shadow-candy-sm"
+                  className="w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-display font-bold shadow-candy-sm"
                   style={{ borderColor: bgColor, background: 'white', color: bgColor }}
                 >
-                  {initial}
+                  {member.name.charAt(0)}
                 </div>
               )}
             </div>
 
-            {/* Info - nama disembunyiin secara default, muncul pas hover */}
+            {/* Info - flex grow so it fills the space consistently */}
             <div className="flex-1 min-w-0">
-              {/* Label default: cuma inisial (anonim) */}
-              <div className="relative h-7 mb-0.5">
-                <motion.div
-                  className="absolute inset-0 flex items-center"
-                  variants={{
-                    hover: { opacity: 0, y: -8 },
-                  }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <span className="font-display font-bold text-lg text-[#3B2A4A]/70">
-                    Anggota {initial}•••
-                  </span>
-                </motion.div>
-                {/* Nama asli: muncul pas hover */}
-                <motion.h3
-                  className="absolute inset-0 flex items-center font-display font-bold text-lg text-[#3B2A4A] truncate"
-                  initial={{ opacity: 0, y: 8 }}
-                  variants={{
-                    hover: { opacity: 1, y: 0 },
-                  }}
-                  transition={{ duration: 0.2 }}
-                >
-                  {member.name}
-                </motion.h3>
-              </div>
-
+              <h3 className="font-display font-bold text-base text-[#3B2A4A] truncate leading-tight">
+                {member.name}
+              </h3>
               {latestWeight ? (
                 <>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-display font-bold" style={{ color: bgColor }}>
+                  <div className="flex items-baseline gap-1 mt-0.5">
+                    <span className="text-2xl font-display font-bold leading-none" style={{ color: bgColor }}>
                       {latestWeight}
                     </span>
-                    <span className="text-sm font-body font-semibold text-[#3B2A4A]/60">kg</span>
+                    <span className="text-xs font-body font-semibold text-[#3B2A4A]/60">kg</span>
                   </div>
                   {bmi && (
-                    <div className="text-xs font-body font-semibold mt-0.5 text-[#3B2A4A]/70">
+                    <div className="text-[11px] font-body font-semibold mt-0.5 text-[#3B2A4A]/70 truncate">
                       BMI {bmi.value} · {bmi.label} {bmi.emoji}
-                    </div>
-                  )}
-                  {trend !== 0 && (
-                    <div className={`inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full text-xs font-bold
-                      ${trend < 0 ? 'bg-candy-mint/30 text-emerald-700' : 'bg-candy-pink/30 text-pink-700'}`}>
-                      {trend < 0 ? '▼' : '▲'} {Math.abs(trend).toFixed(1)} kg
                     </div>
                   )}
                 </>
               ) : (
-                <div className="text-sm font-body text-[#3B2A4A]/50 italic">
+                <div className="text-xs font-body text-[#3B2A4A]/50 italic mt-1">
                   Belum ada data 🥺
                 </div>
               )}
             </div>
 
-            {bmi && (
-              <div className="shrink-0 -mr-2 -mt-2">
-                <BmiCharacter category={bmi.category} size={70} />
+            {/* Character - fixed size slot */}
+            <div className="shrink-0 w-[70px] h-[70px] flex items-center justify-center">
+              {bmi ? (
+                <BmiCharacter category={bmi.category} gender={gender} size={70} />
+              ) : (
+                <div className="text-4xl opacity-30">{gender === 'female' ? '👧' : '👦'}</div>
+              )}
+            </div>
+          </div>
+
+          {/* Bottom row: trend badge - selalu reserve space biar kartu tinggi sama */}
+          <div className="relative mt-2 h-6 flex items-center">
+            {trend !== 0 && latestWeight && (
+              <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold
+                ${trend < 0 ? 'bg-candy-mint/40 text-emerald-700' : 'bg-candy-pink/30 text-pink-700'}`}>
+                {trend < 0 ? '▼' : '▲'} {Math.abs(trend).toFixed(1)} kg dari minggu lalu
               </div>
             )}
           </div>
-
-          {/* Hint "klik untuk detail" pas hover */}
-          <motion.div
-            className="absolute bottom-2 right-3 text-xs font-body font-semibold text-[#3B2A4A]/50"
-            initial={{ opacity: 0 }}
-            variants={{ hover: { opacity: 1 } }}
-            transition={{ duration: 0.2 }}
-          >
-            klik untuk detail →
-          </motion.div>
-        </motion.div>
+        </div>
       </Link>
     </motion.div>
   );

@@ -9,6 +9,7 @@ import {
   addWeighing, deleteWeighing, updateMember, uploadPhoto, deleteMember
 } from '../lib/db';
 import { calcBmi, formatDate, getCurrentWeek } from '../lib/bmi';
+import { getGender } from '../lib/types';
 import { useData } from '../lib/DataContext';
 import BmiCharacter from '../components/BmiCharacter';
 
@@ -36,6 +37,11 @@ export default function MemberDetail() {
     if (!id || !weight) return;
     const w = parseFloat(weight);
     if (isNaN(w) || w <= 0) return;
+    // Validasi: berat harus masuk akal (20-300 kg)
+    if (w < 20 || w > 300) {
+      alert(`Berat ${w} kg ga masuk akal. Masukin angka antara 20-300 kg.`);
+      return;
+    }
     setSaving(true);
     try {
       await addWeighing(id, date, w);
@@ -210,7 +216,7 @@ export default function MemberDetail() {
 
           {bmi && (
             <div className="shrink-0">
-              <BmiCharacter category={bmi.category} size={140} />
+              <BmiCharacter category={bmi.category} gender={getGender(member.name)} size={140} />
             </div>
           )}
         </div>

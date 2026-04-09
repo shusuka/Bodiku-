@@ -15,6 +15,7 @@ export interface Weighing {
 }
 
 export type BmiCategory = 'underweight' | 'normal' | 'overweight' | 'obese';
+export type Gender = 'male' | 'female';
 
 export interface BmiInfo {
   value: number;
@@ -24,3 +25,14 @@ export interface BmiInfo {
   color: string;
   message: string;
 }
+
+// Anggota perempuan - sisanya otomatis laki-laki
+const FEMALE_NAMES = new Set([
+  'sinta', 'yola', 'siska', 'dyah', 'diah', 'bu desi', 'desi', 'yovanka', 'yovan'
+]);
+
+export function getGender(name: string): Gender {
+  const key = name.trim().toLowerCase();
+  return FEMALE_NAMES.has(key) ? 'female' : 'male';
+}
+

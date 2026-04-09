@@ -41,28 +41,28 @@ export default function Home() {
         </p>
       </motion.div>
 
-      {/* Error banner */}
-      {error && (
+      {/* Error banner - cuma muncul kalau data beneran ga ada */}
+      {error && members.length === 0 && (
         <div className="candy-card mb-6 border-red-300 bg-red-50/80">
           <h3 className="font-display font-bold text-red-700 mb-2">⚠️ Ada masalah koneksi</h3>
           <p className="font-body text-sm text-red-900/80 mb-3">{error}</p>
           <div className="font-body text-xs text-red-900/70 space-y-1">
             <p><strong>Checklist:</strong></p>
-            <p>1. Firebase Console → Firestore Database udah di-create?</p>
-            <p>2. Rules udah di-set <code className="bg-red-100 px-1 rounded">allow read, write: if true</code>?</p>
-            <p>3. File <code className="bg-red-100 px-1 rounded">.env</code> (atau env vars Vercel) udah diisi lengkap dari Firebase Console → Project Settings → Web app config?</p>
-            <p>4. Kalau pake ad-blocker (uBlock/Brave Shield), matiin buat domain ini — biasanya blokir <code className="bg-red-100 px-1 rounded">firestore.googleapis.com</code>.</p>
+            <p>1. Firestore Database udah di-create di Firebase Console?</p>
+            <p>2. Rules udah <code className="bg-red-100 px-1 rounded">allow read, write: if true</code>?</p>
+            <p>3. Env vars Vercel udah diisi lengkap?</p>
+            <p>4. Matiin ad-blocker buat domain ini.</p>
           </div>
         </div>
       )}
 
-      {/* Dashboard rekap - tampil kalau ada data */}
-      {!loading && members.length > 0 && !error && (
+      {/* Dashboard rekap */}
+      {members.length > 0 && (
         <Dashboard members={members} weighings={weighings} />
       )}
 
       {/* Section title anggota */}
-      {!loading && members.length > 0 && (
+      {members.length > 0 && (
         <div className="flex items-center justify-between gap-3 mb-4 mt-2">
           <div className="flex items-center gap-3">
             <div className="text-3xl">👥</div>
@@ -127,7 +127,7 @@ export default function Home() {
           Belum ada anggota. Klik "+ Tambah" buat mulai.
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 items-stretch">
           {members.map((m, i) => (
             <MemberCard
               key={m.id}
