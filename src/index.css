@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body, #root {
+    height: 100%;
+  }
+  body {
+    font-family: 'Quicksand', system-ui, sans-serif;
+    background: #FFF8EC;
+    background-image:
+      radial-gradient(at 15% 10%, rgba(255, 111, 181, 0.18) 0px, transparent 50%),
+      radial-gradient(at 85% 20%, rgba(126, 235, 193, 0.22) 0px, transparent 50%),
+      radial-gradient(at 75% 85%, rgba(177, 151, 252, 0.20) 0px, transparent 50%),
+      radial-gradient(at 10% 90%, rgba(255, 230, 109, 0.25) 0px, transparent 50%);
+    min-height: 100vh;
+    color: #3B2A4A;
+  }
+  h1, h2, h3, h4 {
+    font-family: 'Fredoka', system-ui, sans-serif;
+    font-weight: 600;
+  }
+}
+
+@layer components {
+  .candy-btn {
+    @apply relative inline-flex items-center justify-center px-6 py-3 font-display font-semibold text-white rounded-full
+           shadow-candy-sm transition-all duration-150 active:translate-y-1 active:shadow-none
+           border-2 border-black/10;
+  }
+  .candy-btn-pink { @apply candy-btn bg-candy-pink hover:brightness-110; }
+  .candy-btn-mint { @apply candy-btn bg-candy-mint text-emerald-900 hover:brightness-110; }
+  .candy-btn-lemon { @apply candy-btn bg-candy-lemon text-amber-900 hover:brightness-110; }
+  .candy-btn-grape { @apply candy-btn bg-candy-grape hover:brightness-110; }
+  .candy-btn-sky { @apply candy-btn bg-candy-sky text-sky-900 hover:brightness-110; }
+
+  .candy-card {
+    @apply bg-white/80 backdrop-blur-md rounded-[2rem] border-2 border-white shadow-candy p-6;
+  }
+
+  .candy-input {
+    @apply w-full px-5 py-3 rounded-full bg-white border-2 border-pink-200
+           focus:border-candy-pink focus:outline-none focus:ring-4 focus:ring-pink-200/50
+           font-body font-medium transition-all;
+  }
+}
+
+/* Scrollbar lucu */
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-track { background: #FFF0F6; }
+::-webkit-scrollbar-thumb { background: #FF6FB5; border-radius: 10px; border: 2px solid #FFF0F6; }
+::-webkit-scrollbar-thumb:hover { background: #FF4FA3; }
