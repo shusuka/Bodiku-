@@ -59,7 +59,7 @@ export default function BmiCharacter({
     <motion.svg
       width={size}
       height={size}
-      viewBox="0 0 200 200"
+      viewBox="0 0 200 260"
       style={{ filter: 'drop-shadow(0 6px 0 rgba(0,0,0,0.12))' }}
     >
       <ActivityScene
@@ -125,11 +125,87 @@ interface BodyProps {
   rotate?: number;
 }
 
-function Body({ g, h, p, cx = 100, cy = 110, expression = 'happy', rotate = 0 }: BodyProps) {
+function Body({ g, h, p, cx = 100, cy = 130, expression = 'happy', rotate = 0 }: BodyProps) {
   const headCy = cy - p.bodyH / 2 - p.headR + 6;
+  const legTop = cy + p.bodyH / 2 - 4;
+  const legLen = 38;
+  const footY = legTop + legLen;
+  // Pisah kaki proporsional dengan badan
+  const legSpread = Math.max(8, p.bodyW * 0.35);
+  // Warna baju dan celana
+  const shirtColor = p.color;
+  const pantsColor = g === 'female' && !h ? '#FF6FB5' : '#3B5A8C'; // rok pink utk cewek, celana biru utk cowok/hijab
+  const shoeColor = '#3B2A4A';
 
   return (
     <g transform={`rotate(${rotate} ${cx} ${cy})`}>
+      {/* === KAKI (di belakang badan) === */}
+      {/* Kaki kiri */}
+      <line
+        x1={cx - legSpread}
+        y1={legTop}
+        x2={cx - legSpread}
+        y2={footY}
+        stroke="#FFE0BD"
+        strokeWidth="9"
+        strokeLinecap="round"
+      />
+      {/* Kaki kanan */}
+      <line
+        x1={cx + legSpread}
+        y1={legTop}
+        x2={cx + legSpread}
+        y2={footY}
+        stroke="#FFE0BD"
+        strokeWidth="9"
+        strokeLinecap="round"
+      />
+      {/* Sepatu kiri */}
+      <ellipse cx={cx - legSpread} cy={footY + 4} rx="9" ry="5" fill={shoeColor} stroke="#3B2A4A" strokeWidth="2" />
+      {/* Sepatu kanan */}
+      <ellipse cx={cx + legSpread} cy={footY + 4} rx="9" ry="5" fill={shoeColor} stroke="#3B2A4A" strokeWidth="2" />
+
+      {/* === CELANA / ROK === */}
+      {g === 'female' && !h ? (
+        // Rok segitiga buat cewek non-hijab
+        <path
+          d={`M ${cx - p.bodyW * 0.7} ${legTop - 2}
+              L ${cx + p.bodyW * 0.7} ${legTop - 2}
+              L ${cx + p.bodyW * 0.85} ${legTop + 18}
+              L ${cx - p.bodyW * 0.85} ${legTop + 18} Z`}
+          fill={pantsColor}
+          stroke="#3B2A4A"
+          strokeWidth="2.5"
+          strokeLinejoin="round"
+        />
+      ) : (
+        // Celana pendek buat cowok/hijab (overlay di atas kaki)
+        <rect
+          x={cx - p.bodyW * 0.6}
+          y={legTop - 2}
+          width={p.bodyW * 1.2}
+          height="16"
+          rx="3"
+          fill={pantsColor}
+          stroke="#3B2A4A"
+          strokeWidth="2.5"
+        />
+      )}
+
+      {/* Jubah panjang untuk perempuan berhijab (nutupin sebagian kaki) */}
+      {g === 'female' && h && (
+        <path
+          d={`M ${cx - p.bodyW * 0.9} ${cy + 4}
+              Q ${cx - p.bodyW * 1.1} ${footY - 6}, ${cx - p.bodyW * 0.95} ${footY - 2}
+              L ${cx + p.bodyW * 0.95} ${footY - 2}
+              Q ${cx + p.bodyW * 1.1} ${footY - 6}, ${cx + p.bodyW * 0.9} ${cy + 4} Z`}
+          fill="#5DA0BC"
+          stroke="#3B2A4A"
+          strokeWidth="2.5"
+          strokeLinejoin="round"
+        />
+      )}
+
       {/* Hair belakang (perempuan tanpa hijab) */}
       {g === 'female' && !h && (
         <>
@@ -138,8 +214,8 @@ function Body({ g, h, p, cx = 100, cy = 110, expression = 'happy', rotate = 0 }:
         </>
       )}
 
-      {/* Body */}
-      <ellipse cx={cx} cy={cy} rx={p.bodyW} ry={p.bodyH / 2} fill={p.color} stroke="#3B2A4A" strokeWidth="3" />
+      {/* Body / Baju */}
+      <ellipse cx={cx} cy={cy} rx={p.bodyW} ry={p.bodyH / 2} fill={shirtColor} stroke="#3B2A4A" strokeWidth="3" />
 
       {/* Head */}
       <circle cx={cx} cy={headCy} r={p.headR} fill="#FFE0BD" stroke="#3B2A4A" strokeWidth="3" />
@@ -147,7 +223,6 @@ function Body({ g, h, p, cx = 100, cy = 110, expression = 'happy', rotate = 0 }:
       {/* Hijab (cover head + leher area) */}
       {g === 'female' && h && (
         <>
-          {/* hijab outer shape */}
           <path
             d={`M ${cx - p.headR - 4} ${headCy + 4}
                 Q ${cx - p.headR - 8} ${headCy - p.headR - 2}, ${cx} ${headCy - p.headR - 4}
@@ -159,11 +234,8 @@ function Body({ g, h, p, cx = 100, cy = 110, expression = 'happy', rotate = 0 }:
             strokeWidth="3"
             strokeLinejoin="round"
           />
-          {/* face cutout - oval */}
           <ellipse cx={cx} cy={headCy + 2} rx={p.headR - 6} ry={p.headR - 2} fill="#FFE0BD" stroke="none" />
-          {/* hijab inside head outline */}
           <ellipse cx={cx} cy={headCy + 2} rx={p.headR - 6} ry={p.headR - 2} fill="none" stroke="#3B2A4A" strokeWidth="2" />
-          {/* bunga kecil di pipi hijab */}
           <circle cx={cx - p.headR + 2} cy={headCy - 4} r="2" fill="#FF6FB5" />
           <circle cx={cx - p.headR + 4} cy={headCy - 1} r="1.5" fill="#FFE66D" />
         </>
@@ -194,7 +266,6 @@ function Body({ g, h, p, cx = 100, cy = 110, expression = 'happy', rotate = 0 }:
                 Q ${cx - 4} ${headCy - p.headR + 4}, ${cx - p.headR + 2} ${headCy - p.headR + 10} Z`}
             fill="#3B2A4A"
           />
-          {/* pita */}
           <g transform={`translate(${cx + p.headR - 6}, ${headCy - p.headR + 4})`}>
             <ellipse cx="-3" cy="0" rx="4" ry="3" fill="#FF6FB5" stroke="#3B2A4A" strokeWidth="1" />
             <ellipse cx="3" cy="0" rx="4" ry="3" fill="#FF6FB5" stroke="#3B2A4A" strokeWidth="1" />
@@ -292,7 +363,7 @@ function EatBanana({ g, h, p }: BodyProps) {
 function Sleep({ g, h, p }: BodyProps) {
   return (
     <g>
-      <Body g={g} h={h} p={p} cy={130} expression="sleep" rotate={-90} />
+      <Body g={g} h={h} p={p} cy={140} expression="sleep" rotate={-90} />
       <motion.text x="140" y="60" fontSize="20" fill="#74D0F1"
         animate={{ y: [0, -10, 0], opacity: [0, 1, 0] }}
         transition={{ repeat: Infinity, duration: 2 }}>z</motion.text>
@@ -436,29 +507,29 @@ function Bike({ g, h, p }: BodyProps) {
         animate={{ y: [0, -2, 0] }}
         transition={{ repeat: Infinity, duration: 0.5 }}
       >
-        <Body g={g} h={h} p={p} cy={105} expression="happy" />
+        <Body g={g} h={h} p={p} cy={115} expression="happy" />
       </motion.g>
       {/* Sepeda */}
       <motion.g
         animate={{ rotate: 360 }}
         transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-        style={{ transformOrigin: '70px 160px' }}
+        style={{ transformOrigin: '70px 220px' }}
       >
-        <circle cx="70" cy="160" r="18" fill="none" stroke="#3B2A4A" strokeWidth="3" />
-        <line x1="55" y1="160" x2="85" y2="160" stroke="#3B2A4A" strokeWidth="2" />
-        <line x1="70" y1="145" x2="70" y2="175" stroke="#3B2A4A" strokeWidth="2" />
+        <circle cx="70" cy="220" r="18" fill="none" stroke="#3B2A4A" strokeWidth="3" />
+        <line x1="55" y1="220" x2="85" y2="220" stroke="#3B2A4A" strokeWidth="2" />
+        <line x1="70" y1="205" x2="70" y2="235" stroke="#3B2A4A" strokeWidth="2" />
       </motion.g>
       <motion.g
         animate={{ rotate: 360 }}
         transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-        style={{ transformOrigin: '140px 160px' }}
+        style={{ transformOrigin: '140px 220px' }}
       >
-        <circle cx="140" cy="160" r="18" fill="none" stroke="#3B2A4A" strokeWidth="3" />
-        <line x1="125" y1="160" x2="155" y2="160" stroke="#3B2A4A" strokeWidth="2" />
-        <line x1="140" y1="145" x2="140" y2="175" stroke="#3B2A4A" strokeWidth="2" />
+        <circle cx="140" cy="220" r="18" fill="none" stroke="#3B2A4A" strokeWidth="3" />
+        <line x1="125" y1="220" x2="155" y2="220" stroke="#3B2A4A" strokeWidth="2" />
+        <line x1="140" y1="205" x2="140" y2="235" stroke="#3B2A4A" strokeWidth="2" />
       </motion.g>
-      <line x1="70" y1="160" x2="140" y2="160" stroke="#3B2A4A" strokeWidth="3" />
-      <line x1="105" y1="160" x2="105" y2="135" stroke="#3B2A4A" strokeWidth="3" />
+      <line x1="70" y1="220" x2="140" y2="220" stroke="#3B2A4A" strokeWidth="3" />
+      <line x1="105" y1="220" x2="105" y2="195" stroke="#3B2A4A" strokeWidth="3" />
     </g>
   );
 }
@@ -490,7 +561,7 @@ function Walk({ g, h, p }: BodyProps) {
       >
         <Body g={g} h={h} p={p} cy={115} expression="happy" />
       </motion.g>
-      <motion.text x="40" y="170" fontSize="12"
+      <motion.text x="40" y="240" fontSize="12"
         animate={{ x: [0, -10, 0], opacity: [1, 0, 1] }}
         transition={{ repeat: Infinity, duration: 1 }}>👣</motion.text>
     </g>
@@ -530,25 +601,24 @@ function Treadmill({ g, h, p }: BodyProps) {
         animate={{ y: [0, -3, 0] }}
         transition={{ repeat: Infinity, duration: 0.4 }}
       >
-        <Body g={g} h={h} p={p} cy={105} expression="tired" />
+        <Body g={g} h={h} p={p} cy={115} expression="tired" />
       </motion.g>
       {/* Treadmill belt */}
-      <rect x="40" y="155" width="120" height="14" rx="4" fill="#3B2A4A" />
-      <rect x="40" y="155" width="120" height="14" rx="4" fill="none" stroke="#FF6FB5" strokeWidth="2" />
-      {/* Belt lines (animated) */}
+      <rect x="40" y="215" width="120" height="14" rx="4" fill="#3B2A4A" />
+      <rect x="40" y="215" width="120" height="14" rx="4" fill="none" stroke="#FF6FB5" strokeWidth="2" />
       <motion.g
         animate={{ x: [-20, 0] }}
         transition={{ repeat: Infinity, duration: 0.3, ease: 'linear' }}
       >
-        <line x1="50" y1="162" x2="60" y2="162" stroke="#FFE66D" strokeWidth="2" />
-        <line x1="70" y1="162" x2="80" y2="162" stroke="#FFE66D" strokeWidth="2" />
-        <line x1="90" y1="162" x2="100" y2="162" stroke="#FFE66D" strokeWidth="2" />
-        <line x1="110" y1="162" x2="120" y2="162" stroke="#FFE66D" strokeWidth="2" />
-        <line x1="130" y1="162" x2="140" y2="162" stroke="#FFE66D" strokeWidth="2" />
-        <line x1="150" y1="162" x2="160" y2="162" stroke="#FFE66D" strokeWidth="2" />
+        <line x1="50" y1="222" x2="60" y2="222" stroke="#FFE66D" strokeWidth="2" />
+        <line x1="70" y1="222" x2="80" y2="222" stroke="#FFE66D" strokeWidth="2" />
+        <line x1="90" y1="222" x2="100" y2="222" stroke="#FFE66D" strokeWidth="2" />
+        <line x1="110" y1="222" x2="120" y2="222" stroke="#FFE66D" strokeWidth="2" />
+        <line x1="130" y1="222" x2="140" y2="222" stroke="#FFE66D" strokeWidth="2" />
+        <line x1="150" y1="222" x2="160" y2="222" stroke="#FFE66D" strokeWidth="2" />
       </motion.g>
       {/* Console */}
-      <rect x="30" y="120" width="14" height="40" fill="#3B2A4A" rx="2" />
+      <rect x="30" y="170" width="14" height="50" fill="#3B2A4A" rx="2" />
       <motion.text x="155" y="60" fontSize="18"
         animate={{ y: [0, 10, 0], opacity: [1, 0.3, 1] }}
         transition={{ repeat: Infinity, duration: 1 }}>💦</motion.text>
@@ -563,9 +633,9 @@ function Pushup({ g, h, p }: BodyProps) {
         animate={{ y: [0, 8, 0] }}
         transition={{ repeat: Infinity, duration: 1 }}
       >
-        <Body g={g} h={h} p={p} cy={130} expression="tired" rotate={75} />
+        <Body g={g} h={h} p={p} cy={170} expression="tired" rotate={75} />
       </motion.g>
-      <line x1="30" y1="170" x2="170" y2="170" stroke="#3B2A4A" strokeWidth="3" />
+      <line x1="30" y1="225" x2="170" y2="225" stroke="#3B2A4A" strokeWidth="3" />
       <motion.text x="155" y="60" fontSize="16"
         animate={{ y: [0, 8, 0], opacity: [1, 0.3, 1] }}
         transition={{ repeat: Infinity, duration: 1 }}>💦</motion.text>

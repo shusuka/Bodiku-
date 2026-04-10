@@ -91,10 +91,10 @@ export default function MemberCard({ member, latestWeight, weighings, index }: P
               )}
             </div>
 
-            {/* Character - fixed size slot */}
-            <div className="shrink-0 w-[70px] h-[70px] flex items-center justify-center">
+            {/* Character slot - taller untuk full body */}
+            <div className="shrink-0 w-[70px] h-[100px] flex items-center justify-center">
               {bmi ? (
-                <BmiCharacter category={bmi.category} gender={gender} hijab={hijab} seed={seed} size={70} />
+                <BmiCharacter category={bmi.category} gender={gender} hijab={hijab} seed={seed} size={100} />
               ) : (
                 <div className="text-4xl opacity-30">{gender === 'female' ? '👧' : '👦'}</div>
               )}
