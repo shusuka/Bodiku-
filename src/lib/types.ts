@@ -31,8 +31,17 @@ const FEMALE_NAMES = new Set([
   'sinta', 'yola', 'siska', 'dyah', 'diah', 'bu desi', 'desi', 'yovanka', 'yovan'
 ]);
 
+// Anggota perempuan yang berhijab
+const HIJAB_NAMES = new Set([
+  'sinta', 'dyah', 'diah', 'bu desi', 'desi'
+]);
+
 export function getGender(name: string): Gender {
   const key = name.trim().toLowerCase();
   return FEMALE_NAMES.has(key) ? 'female' : 'male';
+}
+
+export function isHijab(name: string): boolean {
+  return HIJAB_NAMES.has(name.trim().toLowerCase());
 }
 

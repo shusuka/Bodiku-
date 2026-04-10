@@ -1,200 +1,638 @@
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { BmiCategory, Gender } from '../lib/types';
 
 interface Props {
   category: BmiCategory;
   gender?: Gender;
+  hijab?: boolean;
   size?: number;
+  /** Seed buat sinkronisasi animasi (pake member id biar tiap orang start dari activity berbeda) */
+  seed?: number;
 }
 
 /**
- * Karakter SVG yang berubah bentuk sesuai BMI + gender (laki/perempuan).
- * - underweight: kurus, gemeter
- * - normal: ideal, senyum + sparkle
- * - overweight: agak bulat, wobble
- * - obese: bulat banget, bouncy + keringet
- *
- * Perempuan: rambut panjang + pita + bulu mata
- * Laki-laki: rambut pendek
+ * Karakter kawaii SVG dengan:
+ * - Proporsi badan yang berubah sesuai BMI (kurus tinggi, gendut bulet)
+ * - Gender (laki / perempuan / perempuan berhijab)
+ * - Animasi aktivitas yang ganti otomatis tiap 8 detik
+ * - Variasi aktivitas berbeda per kategori BMI
  */
-export default function BmiCharacter({ category, gender = 'male', size = 160 }: Props) {
-  const config = {
-    underweight: { bodyW: 60, bodyH: 90, color: '#74D0F1', cheek: '#FFB088', mouth: 'thin' },
-    normal:      { bodyW: 85, bodyH: 95, color: '#7EEBC1', cheek: '#FF6FB5', mouth: 'smile' },
-    overweight:  { bodyW: 115, bodyH: 100, color: '#FFE66D', cheek: '#FF6FB5', mouth: 'o' },
-    obese:       { bodyW: 140, bodyH: 110, color: '#FF6FB5', cheek: '#FFE66D', mouth: 'wide' },
+
+// Daftar aktivitas per kategori BMI
+const ACTIVITIES: Record<BmiCategory, string[]> = {
+  underweight: ['drink-milk', 'eat-banana', 'sleep', 'read-book'],
+  normal:      ['jump-rope', 'yoga', 'jog', 'dance', 'peace'],
+  overweight:  ['bike', 'squat', 'walk', 'dumbbell'],
+  obese:       ['treadmill', 'pushup', 'eat-burger', 'pant', 'drink-water'],
+};
+
+export default function BmiCharacter({
+  category,
+  gender = 'male',
+  hijab = false,
+  size = 160,
+  seed = 0,
+}: Props) {
+  const activities = ACTIVITIES[category];
+  // Tiap karakter mulai di activity berbeda (berdasarkan seed) biar ga semua sama
+  const [activityIndex, setActivityIndex] = useState(seed % activities.length);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActivityIndex(i => (i + 1) % activities.length);
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [activities.length]);
+
+  const activity = activities[activityIndex];
+
+  // Proporsi badan per BMI: width factor, body roundness, head size
+  const proportions = {
+    underweight: { bodyW: 32, bodyH: 48, headR: 26, color: '#74D0F1', cheek: '#FFB088' },
+    normal:      { bodyW: 42, bodyH: 50, headR: 28, color: '#7EEBC1', cheek: '#FF6FB5' },
+    overweight:  { bodyW: 56, bodyH: 52, headR: 30, color: '#FFE66D', cheek: '#FF6FB5' },
+    obese:       { bodyW: 70, bodyH: 56, headR: 33, color: '#FF6FB5', cheek: '#FFE66D' },
   }[category];
-
-  const anim = {
-    underweight: { rotate: [-2, 2, -2], transition: { repeat: Infinity, duration: 0.4 } },
-    normal:      { y: [0, -8, 0], transition: { repeat: Infinity, duration: 2 } },
-    overweight:  { scale: [1, 1.05, 1], rotate: [-3, 3, -3], transition: { repeat: Infinity, duration: 1.2 } },
-    obese:       { scale: [1, 1.12, 0.95, 1.08, 1], transition: { repeat: Infinity, duration: 1.5 } },
-  }[category];
-
-  const cx = 100;
-  const cy = 100;
-  const bodyTop = cy + 10 - config.bodyH / 2;
-
-  // Hair/aksesoris warna berbeda per gender
-  const hairColor = '#3B2A4A';
-  const ribbonColor = gender === 'female' ? '#FF6FB5' : null;
 
   return (
     <motion.svg
       width={size}
       height={size}
       viewBox="0 0 200 200"
-      animate={anim}
       style={{ filter: 'drop-shadow(0 6px 0 rgba(0,0,0,0.12))' }}
     >
-      {/* Sparkles buat kategori normal */}
-      {category === 'normal' && (
-        <>
-          <motion.text x="30" y="40" fontSize="24"
-            animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }}
-            transition={{ repeat: Infinity, duration: 1.8, delay: 0 }}>✨</motion.text>
-          <motion.text x="160" y="50" fontSize="20"
-            animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }}
-            transition={{ repeat: Infinity, duration: 1.8, delay: 0.6 }}>✨</motion.text>
-          <motion.text x="150" y="170" fontSize="18"
-            animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }}
-            transition={{ repeat: Infinity, duration: 1.8, delay: 1.2 }}>⭐</motion.text>
-        </>
-      )}
-
-      {/* Keringat buat obese */}
-      {category === 'obese' && (
-        <motion.text x="145" y="55" fontSize="22"
-          animate={{ y: [0, 10, 0], opacity: [1, 0.3, 1] }}
-          transition={{ repeat: Infinity, duration: 1.2 }}>💦</motion.text>
-      )}
-
-      {/* === RAMBUT PEREMPUAN: Layer belakang (panjang, menjuntai di belakang badan) === */}
-      {gender === 'female' && (
-        <>
-          {/* Rambut belakang kiri */}
-          <path
-            d={`M ${cx - config.bodyW * 0.35} ${bodyTop + 5}
-                Q ${cx - config.bodyW * 0.55} ${cy + 20}, ${cx - config.bodyW * 0.45} ${cy + 40}`}
-            stroke={hairColor}
-            strokeWidth="14"
-            strokeLinecap="round"
-            fill="none"
-          />
-          {/* Rambut belakang kanan */}
-          <path
-            d={`M ${cx + config.bodyW * 0.35} ${bodyTop + 5}
-                Q ${cx + config.bodyW * 0.55} ${cy + 20}, ${cx + config.bodyW * 0.45} ${cy + 40}`}
-            stroke={hairColor}
-            strokeWidth="14"
-            strokeLinecap="round"
-            fill="none"
-          />
-        </>
-      )}
-
-      {/* Badan (ellipse yang ukurannya beda-beda) */}
-      <ellipse
-        cx={cx}
-        cy={cy + 10}
-        rx={config.bodyW / 2}
-        ry={config.bodyH / 2}
-        fill={config.color}
-        stroke="#3B2A4A"
-        strokeWidth="4"
+      <ActivityScene
+        activity={activity}
+        gender={gender}
+        hijab={hijab}
+        proportions={proportions}
+        category={category}
       />
+    </motion.svg>
+  );
+}
 
-      {/* === RAMBUT === */}
-      {gender === 'male' ? (
-        // Laki-laki: rambut pendek tipe "jambul"
-        <path
-          d={`M ${cx - 22} ${bodyTop + 8}
-              Q ${cx - 25} ${bodyTop - 4}, ${cx - 8} ${bodyTop - 2}
-              Q ${cx - 2} ${bodyTop - 10}, ${cx + 8} ${bodyTop - 2}
-              Q ${cx + 20} ${bodyTop - 6}, ${cx + 22} ${bodyTop + 8}
-              Q ${cx + 18} ${bodyTop + 2}, ${cx} ${bodyTop + 4}
-              Q ${cx - 18} ${bodyTop + 2}, ${cx - 22} ${bodyTop + 8} Z`}
-          fill={hairColor}
-          stroke={hairColor}
-          strokeWidth="2"
-          strokeLinejoin="round"
-        />
-      ) : (
-        // Perempuan: poni + rambut atas
+// ===========================================================================
+// Body parts - reusable
+// ===========================================================================
+
+interface SceneProps {
+  activity: string;
+  gender: Gender;
+  hijab: boolean;
+  proportions: { bodyW: number; bodyH: number; headR: number; color: string; cheek: string };
+  category: BmiCategory;
+}
+
+function ActivityScene({ activity, gender, hijab, proportions, category }: SceneProps) {
+  // Render aktivitas yang sesuai
+  switch (activity) {
+    // === UNDERWEIGHT ===
+    case 'drink-milk':   return <DrinkMilk g={gender} h={hijab} p={proportions} />;
+    case 'eat-banana':   return <EatBanana g={gender} h={hijab} p={proportions} />;
+    case 'sleep':        return <Sleep g={gender} h={hijab} p={proportions} />;
+    case 'read-book':    return <ReadBook g={gender} h={hijab} p={proportions} />;
+    // === NORMAL ===
+    case 'jump-rope':    return <JumpRope g={gender} h={hijab} p={proportions} />;
+    case 'yoga':         return <Yoga g={gender} h={hijab} p={proportions} />;
+    case 'jog':          return <Jog g={gender} h={hijab} p={proportions} />;
+    case 'dance':        return <Dance g={gender} h={hijab} p={proportions} />;
+    case 'peace':        return <Peace g={gender} h={hijab} p={proportions} />;
+    // === OVERWEIGHT ===
+    case 'bike':         return <Bike g={gender} h={hijab} p={proportions} />;
+    case 'squat':        return <Squat g={gender} h={hijab} p={proportions} />;
+    case 'walk':         return <Walk g={gender} h={hijab} p={proportions} />;
+    case 'dumbbell':     return <Dumbbell g={gender} h={hijab} p={proportions} />;
+    // === OBESE ===
+    case 'treadmill':    return <Treadmill g={gender} h={hijab} p={proportions} />;
+    case 'pushup':       return <Pushup g={gender} h={hijab} p={proportions} />;
+    case 'eat-burger':   return <EatBurger g={gender} h={hijab} p={proportions} />;
+    case 'pant':         return <Pant g={gender} h={hijab} p={proportions} category={category} />;
+    case 'drink-water':  return <DrinkWater g={gender} h={hijab} p={proportions} />;
+    default:             return <Pant g={gender} h={hijab} p={proportions} category={category} />;
+  }
+}
+
+// Body komponen reusable - gambar 1 karakter lengkap di posisi tertentu
+interface BodyProps {
+  g: Gender;
+  h: boolean;
+  p: { bodyW: number; bodyH: number; headR: number; color: string; cheek: string };
+  cx?: number;
+  cy?: number;
+  expression?: 'happy' | 'tired' | 'sleep' | 'eat' | 'neutral';
+  rotate?: number;
+}
+
+function Body({ g, h, p, cx = 100, cy = 110, expression = 'happy', rotate = 0 }: BodyProps) {
+  const headCy = cy - p.bodyH / 2 - p.headR + 6;
+
+  return (
+    <g transform={`rotate(${rotate} ${cx} ${cy})`}>
+      {/* Hair belakang (perempuan tanpa hijab) */}
+      {g === 'female' && !h && (
         <>
+          <ellipse cx={cx - p.headR + 4} cy={headCy + 6} rx="6" ry="18" fill="#3B2A4A" />
+          <ellipse cx={cx + p.headR - 4} cy={headCy + 6} rx="6" ry="18" fill="#3B2A4A" />
+        </>
+      )}
+
+      {/* Body */}
+      <ellipse cx={cx} cy={cy} rx={p.bodyW} ry={p.bodyH / 2} fill={p.color} stroke="#3B2A4A" strokeWidth="3" />
+
+      {/* Head */}
+      <circle cx={cx} cy={headCy} r={p.headR} fill="#FFE0BD" stroke="#3B2A4A" strokeWidth="3" />
+
+      {/* Hijab (cover head + leher area) */}
+      {g === 'female' && h && (
+        <>
+          {/* hijab outer shape */}
           <path
-            d={`M ${cx - 24} ${bodyTop + 10}
-                Q ${cx - 26} ${bodyTop - 6}, ${cx - 5} ${bodyTop - 8}
-                Q ${cx + 5} ${bodyTop - 12}, ${cx + 22} ${bodyTop - 4}
-                Q ${cx + 26} ${bodyTop + 6}, ${cx + 24} ${bodyTop + 12}
-                Q ${cx + 15} ${bodyTop + 2}, ${cx + 5} ${bodyTop + 6}
-                Q ${cx - 5} ${bodyTop + 2}, ${cx - 18} ${bodyTop + 8}
-                Q ${cx - 24} ${bodyTop + 4}, ${cx - 24} ${bodyTop + 10} Z`}
-            fill={hairColor}
-            stroke={hairColor}
-            strokeWidth="2"
+            d={`M ${cx - p.headR - 4} ${headCy + 4}
+                Q ${cx - p.headR - 8} ${headCy - p.headR - 2}, ${cx} ${headCy - p.headR - 4}
+                Q ${cx + p.headR + 8} ${headCy - p.headR - 2}, ${cx + p.headR + 4} ${headCy + 4}
+                L ${cx + p.headR + 6} ${headCy + p.headR + 8}
+                Q ${cx} ${headCy + p.headR + 14}, ${cx - p.headR - 6} ${headCy + p.headR + 8} Z`}
+            fill="#74D0F1"
+            stroke="#3B2A4A"
+            strokeWidth="3"
             strokeLinejoin="round"
           />
-          {/* Pita */}
-          {ribbonColor && (
-            <g transform={`translate(${cx + 14}, ${bodyTop - 2})`}>
-              <path
-                d="M -6 0 Q -10 -6, -4 -4 Q 0 -2, 0 0 Q 0 -2, 4 -4 Q 10 -6, 6 0 Q 10 6, 4 4 Q 0 2, 0 0 Q 0 2, -4 4 Q -10 6, -6 0 Z"
-                fill={ribbonColor}
-                stroke="#3B2A4A"
-                strokeWidth="1.5"
-              />
-              <circle cx="0" cy="0" r="2" fill="#3B2A4A" />
-            </g>
-          )}
+          {/* face cutout - oval */}
+          <ellipse cx={cx} cy={headCy + 2} rx={p.headR - 6} ry={p.headR - 2} fill="#FFE0BD" stroke="none" />
+          {/* hijab inside head outline */}
+          <ellipse cx={cx} cy={headCy + 2} rx={p.headR - 6} ry={p.headR - 2} fill="none" stroke="#3B2A4A" strokeWidth="2" />
+          {/* bunga kecil di pipi hijab */}
+          <circle cx={cx - p.headR + 2} cy={headCy - 4} r="2" fill="#FF6FB5" />
+          <circle cx={cx - p.headR + 4} cy={headCy - 1} r="1.5" fill="#FFE66D" />
         </>
       )}
 
-      {/* Pipi */}
-      <circle cx={cx - config.bodyW * 0.28} cy={cy + 5} r="8" fill={config.cheek} opacity="0.7" />
-      <circle cx={cx + config.bodyW * 0.28} cy={cy + 5} r="8" fill={config.cheek} opacity="0.7" />
+      {/* Hair laki-laki (jambul pendek) */}
+      {g === 'male' && (
+        <path
+          d={`M ${cx - p.headR + 4} ${headCy - p.headR + 8}
+              Q ${cx - p.headR + 2} ${headCy - p.headR - 2}, ${cx - 4} ${headCy - p.headR + 2}
+              Q ${cx} ${headCy - p.headR - 6}, ${cx + 6} ${headCy - p.headR}
+              Q ${cx + p.headR - 2} ${headCy - p.headR - 2}, ${cx + p.headR - 4} ${headCy - p.headR + 8}
+              Q ${cx + 8} ${headCy - p.headR + 4}, ${cx} ${headCy - p.headR + 6}
+              Q ${cx - 8} ${headCy - p.headR + 4}, ${cx - p.headR + 4} ${headCy - p.headR + 8} Z`}
+          fill="#3B2A4A"
+        />
+      )}
 
-      {/* Mata */}
-      <circle cx={cx - 18} cy={cy - 15} r="6" fill="#3B2A4A" />
-      <circle cx={cx + 18} cy={cy - 15} r="6" fill="#3B2A4A" />
-      <circle cx={cx - 16} cy={cy - 17} r="2" fill="white" />
-      <circle cx={cx + 20} cy={cy - 17} r="2" fill="white" />
-
-      {/* Bulu mata perempuan */}
-      {gender === 'female' && (
+      {/* Hair perempuan tanpa hijab (poni atas + side) */}
+      {g === 'female' && !h && (
         <>
-          <line x1={cx - 24} y1={cy - 22} x2={cx - 22} y2={cy - 19} stroke="#3B2A4A" strokeWidth="2" strokeLinecap="round" />
-          <line x1={cx - 20} y1={cy - 24} x2={cx - 20} y2={cy - 20} stroke="#3B2A4A" strokeWidth="2" strokeLinecap="round" />
-          <line x1={cx - 15} y1={cy - 23} x2={cx - 16} y2={cy - 20} stroke="#3B2A4A" strokeWidth="2" strokeLinecap="round" />
-          <line x1={cx + 15} y1={cy - 23} x2={cx + 16} y2={cy - 20} stroke="#3B2A4A" strokeWidth="2" strokeLinecap="round" />
-          <line x1={cx + 20} y1={cy - 24} x2={cx + 20} y2={cy - 20} stroke="#3B2A4A" strokeWidth="2" strokeLinecap="round" />
-          <line x1={cx + 24} y1={cy - 22} x2={cx + 22} y2={cy - 19} stroke="#3B2A4A" strokeWidth="2" strokeLinecap="round" />
+          <path
+            d={`M ${cx - p.headR + 2} ${headCy - p.headR + 10}
+                Q ${cx - p.headR - 2} ${headCy - p.headR - 4}, ${cx - 6} ${headCy - p.headR}
+                Q ${cx + 2} ${headCy - p.headR - 8}, ${cx + 8} ${headCy - p.headR}
+                Q ${cx + p.headR + 2} ${headCy - p.headR - 2}, ${cx + p.headR - 2} ${headCy - p.headR + 10}
+                Q ${cx + 12} ${headCy - p.headR + 6}, ${cx + 4} ${headCy - p.headR + 8}
+                Q ${cx - 4} ${headCy - p.headR + 4}, ${cx - p.headR + 2} ${headCy - p.headR + 10} Z`}
+            fill="#3B2A4A"
+          />
+          {/* pita */}
+          <g transform={`translate(${cx + p.headR - 6}, ${headCy - p.headR + 4})`}>
+            <ellipse cx="-3" cy="0" rx="4" ry="3" fill="#FF6FB5" stroke="#3B2A4A" strokeWidth="1" />
+            <ellipse cx="3" cy="0" rx="4" ry="3" fill="#FF6FB5" stroke="#3B2A4A" strokeWidth="1" />
+            <circle cx="0" cy="0" r="1.5" fill="#3B2A4A" />
+          </g>
         </>
       )}
+
+      {/* Mata - chibi besar */}
+      <Eyes cx={cx} cy={headCy + 2} expression={expression} female={g === 'female'} />
+
+      {/* Pipi blush */}
+      <circle cx={cx - p.headR * 0.55} cy={headCy + 8} r="4" fill={p.cheek} opacity="0.6" />
+      <circle cx={cx + p.headR * 0.55} cy={headCy + 8} r="4" fill={p.cheek} opacity="0.6" />
 
       {/* Mulut */}
-      {config.mouth === 'thin' && (
-        <line x1={cx - 8} y1={cy + 10} x2={cx + 8} y2={cy + 10} stroke="#3B2A4A" strokeWidth="3" strokeLinecap="round" />
-      )}
-      {config.mouth === 'smile' && (
-        <path d={`M ${cx - 12} ${cy + 5} Q ${cx} ${cy + 18} ${cx + 12} ${cy + 5}`} stroke="#3B2A4A" strokeWidth="4" fill="none" strokeLinecap="round" />
-      )}
-      {config.mouth === 'o' && (
-        <ellipse cx={cx} cy={cy + 10} rx="6" ry="8" fill="#3B2A4A" />
-      )}
-      {config.mouth === 'wide' && (
-        <path d={`M ${cx - 16} ${cy + 5} Q ${cx} ${cy + 25} ${cx + 16} ${cy + 5}`} stroke="#3B2A4A" strokeWidth="4" fill="#3B2A4A" strokeLinecap="round" />
-      )}
+      <Mouth cx={cx} cy={headCy + 14} expression={expression} />
+    </g>
+  );
+}
 
-      {/* Lipstik perempuan (titik merah kecil di mulut) */}
-      {gender === 'female' && (config.mouth === 'smile' || config.mouth === 'thin') && (
-        <circle cx={cx} cy={cy + 12} r="1.5" fill="#FF6FB5" />
+function Eyes({ cx, cy, expression, female }: { cx: number; cy: number; expression: string; female: boolean }) {
+  if (expression === 'sleep') {
+    return (
+      <>
+        <path d={`M ${cx - 12} ${cy} Q ${cx - 8} ${cy + 3}, ${cx - 4} ${cy}`} stroke="#3B2A4A" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+        <path d={`M ${cx + 4} ${cy} Q ${cx + 8} ${cy + 3}, ${cx + 12} ${cy}`} stroke="#3B2A4A" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+      </>
+    );
+  }
+  // mata chibi besar
+  return (
+    <>
+      <ellipse cx={cx - 9} cy={cy} rx="4" ry="5" fill="#3B2A4A" />
+      <ellipse cx={cx + 9} cy={cy} rx="4" ry="5" fill="#3B2A4A" />
+      <circle cx={cx - 8} cy={cy - 1} r="1.4" fill="white" />
+      <circle cx={cx + 10} cy={cy - 1} r="1.4" fill="white" />
+      {female && (
+        <>
+          <line x1={cx - 13} y1={cy - 4} x2={cx - 11} y2={cy - 2} stroke="#3B2A4A" strokeWidth="1.5" strokeLinecap="round" />
+          <line x1={cx + 13} y1={cy - 4} x2={cx + 11} y2={cy - 2} stroke="#3B2A4A" strokeWidth="1.5" strokeLinecap="round" />
+        </>
       )}
+    </>
+  );
+}
 
-      {/* Tangan kecil */}
-      <circle cx={cx - config.bodyW / 2 - 2} cy={cy + 15} r="10" fill={config.color} stroke="#3B2A4A" strokeWidth="4" />
-      <circle cx={cx + config.bodyW / 2 + 2} cy={cy + 15} r="10" fill={config.color} stroke="#3B2A4A" strokeWidth="4" />
-    </motion.svg>
+function Mouth({ cx, cy, expression }: { cx: number; cy: number; expression: string }) {
+  if (expression === 'eat') {
+    return <ellipse cx={cx} cy={cy} rx="4" ry="3" fill="#3B2A4A" />;
+  }
+  if (expression === 'tired') {
+    return <line x1={cx - 4} y1={cy} x2={cx + 4} y2={cy} stroke="#3B2A4A" strokeWidth="2" strokeLinecap="round" />;
+  }
+  if (expression === 'sleep') {
+    return <ellipse cx={cx + 4} cy={cy} rx="3" ry="1.5" fill="#3B2A4A" opacity="0.5" />;
+  }
+  return <path d={`M ${cx - 5} ${cy - 1} Q ${cx} ${cy + 4}, ${cx + 5} ${cy - 1}`} stroke="#3B2A4A" strokeWidth="2" fill="none" strokeLinecap="round" />;
+}
+
+// ===========================================================================
+// AKTIVITAS - tiap aktivitas adalah scene SVG dengan animasi
+// ===========================================================================
+
+// === UNDERWEIGHT ===
+
+function DrinkMilk({ g, h, p }: BodyProps) {
+  return (
+    <g>
+      <Body g={g} h={h} p={p} cy={115} expression="happy" />
+      {/* Gelas susu di tangan */}
+      <motion.g
+        animate={{ rotate: [0, -5, 0] }}
+        transition={{ repeat: Infinity, duration: 2 }}
+        style={{ transformOrigin: '130px 100px' }}
+      >
+        <rect x="125" y="90" width="14" height="20" rx="2" fill="white" stroke="#3B2A4A" strokeWidth="2" />
+        <ellipse cx="132" cy="91" rx="7" ry="2" fill="#F5F5F5" stroke="#3B2A4A" strokeWidth="2" />
+      </motion.g>
+    </g>
+  );
+}
+
+function EatBanana({ g, h, p }: BodyProps) {
+  return (
+    <g>
+      <Body g={g} h={h} p={p} cy={115} expression="eat" />
+      <motion.g animate={{ y: [0, -2, 0] }} transition={{ repeat: Infinity, duration: 0.8 }}>
+        <path d="M 120 80 Q 140 75, 145 95 Q 142 90, 122 88 Z" fill="#FFE66D" stroke="#3B2A4A" strokeWidth="2" />
+      </motion.g>
+    </g>
+  );
+}
+
+function Sleep({ g, h, p }: BodyProps) {
+  return (
+    <g>
+      <Body g={g} h={h} p={p} cy={130} expression="sleep" rotate={-90} />
+      <motion.text x="140" y="60" fontSize="20" fill="#74D0F1"
+        animate={{ y: [0, -10, 0], opacity: [0, 1, 0] }}
+        transition={{ repeat: Infinity, duration: 2 }}>z</motion.text>
+      <motion.text x="155" y="50" fontSize="16" fill="#74D0F1"
+        animate={{ y: [0, -8, 0], opacity: [0, 1, 0] }}
+        transition={{ repeat: Infinity, duration: 2, delay: 0.5 }}>z</motion.text>
+    </g>
+  );
+}
+
+function ReadBook({ g, h, p }: BodyProps) {
+  return (
+    <g>
+      <Body g={g} h={h} p={p} cy={115} expression="happy" />
+      {/* Buku */}
+      <g transform="translate(80, 110)">
+        <rect x="0" y="0" width="40" height="22" rx="1" fill="#FF6FB5" stroke="#3B2A4A" strokeWidth="2" />
+        <line x1="20" y1="0" x2="20" y2="22" stroke="#3B2A4A" strokeWidth="1.5" />
+        <line x1="5" y1="6" x2="16" y2="6" stroke="white" strokeWidth="1" />
+        <line x1="5" y1="11" x2="16" y2="11" stroke="white" strokeWidth="1" />
+        <line x1="24" y1="6" x2="35" y2="6" stroke="white" strokeWidth="1" />
+        <line x1="24" y1="11" x2="35" y2="11" stroke="white" strokeWidth="1" />
+      </g>
+    </g>
+  );
+}
+
+// === NORMAL ===
+
+function JumpRope({ g, h, p }: BodyProps) {
+  return (
+    <g>
+      <motion.g
+        animate={{ y: [0, -8, 0] }}
+        transition={{ repeat: Infinity, duration: 0.6 }}
+      >
+        <Body g={g} h={h} p={p} cy={115} expression="happy" />
+      </motion.g>
+      <motion.path
+        d="M 50 130 Q 100 90, 150 130"
+        stroke="#FF6FB5"
+        strokeWidth="2.5"
+        fill="none"
+        animate={{ d: ['M 50 130 Q 100 90, 150 130', 'M 50 130 Q 100 170, 150 130', 'M 50 130 Q 100 90, 150 130'] }}
+        transition={{ repeat: Infinity, duration: 0.6 }}
+      />
+      <motion.text x="35" y="50" fontSize="18"
+        animate={{ opacity: [0, 1, 0], y: [0, -5, 0] }}
+        transition={{ repeat: Infinity, duration: 1.5 }}>✨</motion.text>
+    </g>
+  );
+}
+
+function Yoga({ g, h, p }: BodyProps) {
+  return (
+    <g>
+      <motion.g
+        animate={{ rotate: [0, 3, -3, 0] }}
+        transition={{ repeat: Infinity, duration: 3 }}
+        style={{ transformOrigin: '100px 110px' }}
+      >
+        <Body g={g} h={h} p={p} cy={115} expression="happy" />
+        {/* tangan ke atas */}
+        <line x1={100 - p.bodyW + 4} y1="100" x2="65" y2="55" stroke="#FFE0BD" strokeWidth="6" strokeLinecap="round" />
+        <line x1={100 + p.bodyW - 4} y1="100" x2="135" y2="55" stroke="#FFE0BD" strokeWidth="6" strokeLinecap="round" />
+      </motion.g>
+      <motion.text x="55" y="50" fontSize="14"
+        animate={{ opacity: [0, 1, 0] }}
+        transition={{ repeat: Infinity, duration: 2 }}>🧘</motion.text>
+    </g>
+  );
+}
+
+function Jog({ g, h, p }: BodyProps) {
+  return (
+    <g>
+      <motion.g
+        animate={{ y: [0, -3, 0] }}
+        transition={{ repeat: Infinity, duration: 0.4 }}
+      >
+        <Body g={g} h={h} p={p} cy={115} expression="happy" />
+      </motion.g>
+      {/* speed lines */}
+      <motion.g
+        animate={{ x: [-20, 0, -20] }}
+        transition={{ repeat: Infinity, duration: 0.5 }}
+      >
+        <line x1="20" y1="100" x2="40" y2="100" stroke="#FF6FB5" strokeWidth="2" strokeLinecap="round" />
+        <line x1="15" y1="115" x2="40" y2="115" stroke="#FF6FB5" strokeWidth="2" strokeLinecap="round" />
+        <line x1="20" y1="130" x2="40" y2="130" stroke="#FF6FB5" strokeWidth="2" strokeLinecap="round" />
+      </motion.g>
+    </g>
+  );
+}
+
+function Dance({ g, h, p }: BodyProps) {
+  return (
+    <g>
+      <motion.g
+        animate={{ rotate: [-8, 8, -8], y: [0, -4, 0] }}
+        transition={{ repeat: Infinity, duration: 1 }}
+        style={{ transformOrigin: '100px 130px' }}
+      >
+        <Body g={g} h={h} p={p} cy={115} expression="happy" />
+      </motion.g>
+      <motion.text x="40" y="60" fontSize="16"
+        animate={{ rotate: [0, 20, 0], opacity: [0, 1, 0] }}
+        transition={{ repeat: Infinity, duration: 1.5 }}>🎵</motion.text>
+      <motion.text x="150" y="70" fontSize="16"
+        animate={{ rotate: [0, -20, 0], opacity: [0, 1, 0] }}
+        transition={{ repeat: Infinity, duration: 1.5, delay: 0.5 }}>🎶</motion.text>
+    </g>
+  );
+}
+
+function Peace({ g, h, p }: BodyProps) {
+  return (
+    <g>
+      <motion.g
+        animate={{ y: [0, -2, 0] }}
+        transition={{ repeat: Infinity, duration: 1.5 }}
+      >
+        <Body g={g} h={h} p={p} cy={115} expression="happy" />
+        {/* Tangan peace sign */}
+        <circle cx="135" cy="85" r="6" fill="#FFE0BD" stroke="#3B2A4A" strokeWidth="2" />
+        <text x="129" y="90" fontSize="10">✌</text>
+      </motion.g>
+      <motion.text x="40" y="60" fontSize="14"
+        animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }}
+        transition={{ repeat: Infinity, duration: 1.5 }}>⭐</motion.text>
+    </g>
+  );
+}
+
+// === OVERWEIGHT ===
+
+function Bike({ g, h, p }: BodyProps) {
+  return (
+    <g>
+      <motion.g
+        animate={{ y: [0, -2, 0] }}
+        transition={{ repeat: Infinity, duration: 0.5 }}
+      >
+        <Body g={g} h={h} p={p} cy={105} expression="happy" />
+      </motion.g>
+      {/* Sepeda */}
+      <motion.g
+        animate={{ rotate: 360 }}
+        transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+        style={{ transformOrigin: '70px 160px' }}
+      >
+        <circle cx="70" cy="160" r="18" fill="none" stroke="#3B2A4A" strokeWidth="3" />
+        <line x1="55" y1="160" x2="85" y2="160" stroke="#3B2A4A" strokeWidth="2" />
+        <line x1="70" y1="145" x2="70" y2="175" stroke="#3B2A4A" strokeWidth="2" />
+      </motion.g>
+      <motion.g
+        animate={{ rotate: 360 }}
+        transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+        style={{ transformOrigin: '140px 160px' }}
+      >
+        <circle cx="140" cy="160" r="18" fill="none" stroke="#3B2A4A" strokeWidth="3" />
+        <line x1="125" y1="160" x2="155" y2="160" stroke="#3B2A4A" strokeWidth="2" />
+        <line x1="140" y1="145" x2="140" y2="175" stroke="#3B2A4A" strokeWidth="2" />
+      </motion.g>
+      <line x1="70" y1="160" x2="140" y2="160" stroke="#3B2A4A" strokeWidth="3" />
+      <line x1="105" y1="160" x2="105" y2="135" stroke="#3B2A4A" strokeWidth="3" />
+    </g>
+  );
+}
+
+function Squat({ g, h, p }: BodyProps) {
+  return (
+    <g>
+      <motion.g
+        animate={{ y: [0, 12, 0], scaleY: [1, 0.85, 1] }}
+        transition={{ repeat: Infinity, duration: 1.2 }}
+        style={{ transformOrigin: '100px 130px' }}
+      >
+        <Body g={g} h={h} p={p} cy={115} expression="tired" />
+      </motion.g>
+      <motion.text x="150" y="60" fontSize="16"
+        animate={{ opacity: [0, 1, 0], y: [0, -5, 0] }}
+        transition={{ repeat: Infinity, duration: 1.2 }}>💪</motion.text>
+    </g>
+  );
+}
+
+function Walk({ g, h, p }: BodyProps) {
+  return (
+    <g>
+      <motion.g
+        animate={{ y: [0, -2, 0], rotate: [-1, 1, -1] }}
+        transition={{ repeat: Infinity, duration: 0.7 }}
+        style={{ transformOrigin: '100px 130px' }}
+      >
+        <Body g={g} h={h} p={p} cy={115} expression="happy" />
+      </motion.g>
+      <motion.text x="40" y="170" fontSize="12"
+        animate={{ x: [0, -10, 0], opacity: [1, 0, 1] }}
+        transition={{ repeat: Infinity, duration: 1 }}>👣</motion.text>
+    </g>
+  );
+}
+
+function Dumbbell({ g, h, p }: BodyProps) {
+  return (
+    <g>
+      <Body g={g} h={h} p={p} cy={115} expression="tired" />
+      <motion.g
+        animate={{ y: [0, -25, 0] }}
+        transition={{ repeat: Infinity, duration: 1.2 }}
+      >
+        <circle cx="60" cy="100" r="6" fill="#3B2A4A" />
+        <rect x="58" y="98" width="4" height="4" fill="#3B2A4A" />
+        <circle cx="48" cy="100" r="6" fill="#3B2A4A" />
+      </motion.g>
+      <motion.g
+        animate={{ y: [0, -25, 0] }}
+        transition={{ repeat: Infinity, duration: 1.2 }}
+      >
+        <circle cx="140" cy="100" r="6" fill="#3B2A4A" />
+        <rect x="138" y="98" width="4" height="4" fill="#3B2A4A" />
+        <circle cx="152" cy="100" r="6" fill="#3B2A4A" />
+      </motion.g>
+    </g>
+  );
+}
+
+// === OBESE ===
+
+function Treadmill({ g, h, p }: BodyProps) {
+  return (
+    <g>
+      <motion.g
+        animate={{ y: [0, -3, 0] }}
+        transition={{ repeat: Infinity, duration: 0.4 }}
+      >
+        <Body g={g} h={h} p={p} cy={105} expression="tired" />
+      </motion.g>
+      {/* Treadmill belt */}
+      <rect x="40" y="155" width="120" height="14" rx="4" fill="#3B2A4A" />
+      <rect x="40" y="155" width="120" height="14" rx="4" fill="none" stroke="#FF6FB5" strokeWidth="2" />
+      {/* Belt lines (animated) */}
+      <motion.g
+        animate={{ x: [-20, 0] }}
+        transition={{ repeat: Infinity, duration: 0.3, ease: 'linear' }}
+      >
+        <line x1="50" y1="162" x2="60" y2="162" stroke="#FFE66D" strokeWidth="2" />
+        <line x1="70" y1="162" x2="80" y2="162" stroke="#FFE66D" strokeWidth="2" />
+        <line x1="90" y1="162" x2="100" y2="162" stroke="#FFE66D" strokeWidth="2" />
+        <line x1="110" y1="162" x2="120" y2="162" stroke="#FFE66D" strokeWidth="2" />
+        <line x1="130" y1="162" x2="140" y2="162" stroke="#FFE66D" strokeWidth="2" />
+        <line x1="150" y1="162" x2="160" y2="162" stroke="#FFE66D" strokeWidth="2" />
+      </motion.g>
+      {/* Console */}
+      <rect x="30" y="120" width="14" height="40" fill="#3B2A4A" rx="2" />
+      <motion.text x="155" y="60" fontSize="18"
+        animate={{ y: [0, 10, 0], opacity: [1, 0.3, 1] }}
+        transition={{ repeat: Infinity, duration: 1 }}>💦</motion.text>
+    </g>
+  );
+}
+
+function Pushup({ g, h, p }: BodyProps) {
+  return (
+    <g>
+      <motion.g
+        animate={{ y: [0, 8, 0] }}
+        transition={{ repeat: Infinity, duration: 1 }}
+      >
+        <Body g={g} h={h} p={p} cy={130} expression="tired" rotate={75} />
+      </motion.g>
+      <line x1="30" y1="170" x2="170" y2="170" stroke="#3B2A4A" strokeWidth="3" />
+      <motion.text x="155" y="60" fontSize="16"
+        animate={{ y: [0, 8, 0], opacity: [1, 0.3, 1] }}
+        transition={{ repeat: Infinity, duration: 1 }}>💦</motion.text>
+    </g>
+  );
+}
+
+function EatBurger({ g, h, p }: BodyProps) {
+  return (
+    <g>
+      <Body g={g} h={h} p={p} cy={115} expression="eat" />
+      <motion.g
+        animate={{ y: [0, -3, 0], rotate: [0, -3, 0] }}
+        transition={{ repeat: Infinity, duration: 0.8 }}
+      >
+        {/* Burger */}
+        <ellipse cx="135" cy="92" rx="13" ry="5" fill="#D97B3A" stroke="#3B2A4A" strokeWidth="2" />
+        <rect x="122" y="92" width="26" height="4" fill="#7EEBC1" />
+        <rect x="122" y="96" width="26" height="3" fill="#FF6FB5" />
+        <ellipse cx="135" cy="100" rx="13" ry="5" fill="#D97B3A" stroke="#3B2A4A" strokeWidth="2" />
+        {/* Sesame seeds */}
+        <circle cx="130" cy="89" r="0.8" fill="white" />
+        <circle cx="135" cy="88" r="0.8" fill="white" />
+        <circle cx="140" cy="89" r="0.8" fill="white" />
+      </motion.g>
+    </g>
+  );
+}
+
+function Pant({ g, h, p, category }: BodyProps & { category: BmiCategory }) {
+  return (
+    <g>
+      <motion.g
+        animate={{ scale: [1, 1.04, 1] }}
+        transition={{ repeat: Infinity, duration: 1 }}
+        style={{ transformOrigin: '100px 130px' }}
+      >
+        <Body g={g} h={h} p={p} cy={115} expression="tired" />
+      </motion.g>
+      {category === 'obese' && (
+        <>
+          <motion.text x="145" y="55" fontSize="18"
+            animate={{ y: [0, 12, 0], opacity: [1, 0.3, 1] }}
+            transition={{ repeat: Infinity, duration: 1 }}>💦</motion.text>
+          <motion.text x="40" y="60" fontSize="18"
+            animate={{ y: [0, 12, 0], opacity: [1, 0.3, 1] }}
+            transition={{ repeat: Infinity, duration: 1, delay: 0.5 }}>💦</motion.text>
+        </>
+      )}
+    </g>
+  );
+}
+
+function DrinkWater({ g, h, p }: BodyProps) {
+  return (
+    <g>
+      <Body g={g} h={h} p={p} cy={115} expression="happy" />
+      <motion.g
+        animate={{ rotate: [0, -15, 0] }}
+        transition={{ repeat: Infinity, duration: 2 }}
+        style={{ transformOrigin: '135px 105px' }}
+      >
+        {/* Bottle */}
+        <rect x="128" y="80" width="14" height="28" rx="3" fill="#74D0F1" stroke="#3B2A4A" strokeWidth="2" />
+        <rect x="131" y="74" width="8" height="6" rx="1" fill="#3B2A4A" />
+        <rect x="130" y="88" width="10" height="14" fill="#A6E0F5" />
+      </motion.g>
+    </g>
   );
 }

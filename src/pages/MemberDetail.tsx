@@ -9,7 +9,7 @@ import {
   addWeighing, deleteWeighing, updateMember, uploadPhoto, deleteMember
 } from '../lib/db';
 import { calcBmi, formatDate, getCurrentWeek } from '../lib/bmi';
-import { getGender } from '../lib/types';
+import { getGender, isHijab } from '../lib/types';
 import { useData } from '../lib/DataContext';
 import BmiCharacter from '../components/BmiCharacter';
 
@@ -216,7 +216,7 @@ export default function MemberDetail() {
 
           {bmi && (
             <div className="shrink-0">
-              <BmiCharacter category={bmi.category} gender={getGender(member.name)} size={140} />
+              <BmiCharacter category={bmi.category} gender={getGender(member.name)} hijab={isHijab(member.name)} size={140} />
             </div>
           )}
         </div>

@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Member, Weighing, getGender } from '../lib/types';
+import { Member, Weighing, getGender, isHijab } from '../lib/types';
 import { calcBmi } from '../lib/bmi';
 import BmiCharacter from './BmiCharacter';
 
@@ -14,6 +14,9 @@ interface Props {
 export default function MemberCard({ member, latestWeight, weighings, index }: Props) {
   const bmi = latestWeight ? calcBmi(latestWeight, member.heightCm) : null;
   const gender = getGender(member.name);
+  const hijab = isHijab(member.name);
+  // Seed dari member id biar tiap orang start aktivitas berbeda
+  const seed = member.id.split('').reduce((s, c) => s + c.charCodeAt(0), 0);
 
   const memberWeighings = weighings
     .filter(w => w.memberId === member.id)
@@ -91,7 +94,7 @@ export default function MemberCard({ member, latestWeight, weighings, index }: P
             {/* Character - fixed size slot */}
             <div className="shrink-0 w-[70px] h-[70px] flex items-center justify-center">
               {bmi ? (
-                <BmiCharacter category={bmi.category} gender={gender} size={70} />
+                <BmiCharacter category={bmi.category} gender={gender} hijab={hijab} seed={seed} size={70} />
               ) : (
                 <div className="text-4xl opacity-30">{gender === 'female' ? '👧' : '👦'}</div>
               )}
